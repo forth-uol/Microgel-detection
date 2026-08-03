@@ -1,0 +1,6 @@
+path: E:\Livesurf\Total\microgel_dataset_clean
+train: images/train
+val: images/val
+
+names:
+  0: microgel

@@ -1,0 +1,10 @@
+barklalogin1.liv.ac.uk (log)
+barklalogin2.liv.ac.uk
+barklaviz1.liv.ac.uk (check)
+barklaviz2.liv.ac.uk
+module load python/3.11.9-gcc14.2.0
+source ~/yolo_project/yolo_env/bin/activate
+cd ~/yolo_project
+1-15（new），18，19，20，21，26，27，31，32，33，38，39，40，44,51,52，56，57，58
+129，133，169，257，279，297，
+，133
