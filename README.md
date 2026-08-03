@@ -229,7 +229,7 @@ cat data.yaml
 <img width="376" height="142" alt="image" src="https://github.com/user-attachments/assets/0119ebe0-d1f7-4a9f-99d5-b54ca38f04d0" />
 
 
-## Step 6: Load the Conda Module on Barkla
+## Step 6: Load the Miniforge Conda Module on Barkla
 
 The previous commands:
 
@@ -238,7 +238,7 @@ module load python/3.11.9-gcc14.2.0
 source ~/yolo_project/yolo_env/bin/activate
 ```
 
-activate a standard Python virtual environment rather than a Conda environment.
+load a standard Python virtual environment rather than a Conda environment.
 
 Do not load the old Python module or activate the old `yolo_env` virtual environment when using the new Conda environment.
 
@@ -249,19 +249,26 @@ module --ignore-cache spider 2>&1 | grep -iE "anaconda|miniconda|miniforge|conda
 module spider miniforge3
 ```
 
-On Barkla, the available Miniforge module includes:
+On Barkla, the required Miniforge module is:
 
 ```text
 miniforge3/25.3.0-python3.12.10-dynamic
 ```
 
-Load this module:
+Load the module:
 
 ```bash
 module load miniforge3/25.3.0-python3.12.10-dynamic
 ```
 
-Barkla may display an informational message explaining that this is a dynamic Miniforge installation. This is not an error.
+Barkla may display the following informational message:
+
+```text
+This module is based on Miniforge3-25.3.0-3-Linux-x86_64.sh and includes some frequently used packages.
+It's called 'dynamic' because more light packages may be added later and conda may be updated to newer version.
+```
+
+This is an informational message, not an error.
 
 Check that Conda has loaded correctly:
 
@@ -270,7 +277,7 @@ which conda
 conda --version
 ```
 
-The expected output is similar to:
+The expected output is:
 
 ```text
 /opt/apps/pkg/tools/miniforge3/25.3.0_python3.12.10_dynamic/bin/conda
@@ -279,31 +286,36 @@ conda 25.7.0
 
 If a valid Conda path and version are displayed, the Miniforge module has loaded successfully.
 
-Do not run the following old commands:
+
+## Step 7: Create the YOLO Conda Environment
+
+Make sure the Miniforge module has already been loaded:
 
 ```bash
-module load python/3.11.9-gcc14.2.0
-source ~/yolo_project/yolo_env/bin/activate
+module load miniforge3/25.3.0-python3.12.10-dynamic
 ```
 
-They belong to the old Python virtual environment and should not be mixed with the new Conda environment.
-
-
-# Step 7: Create the Conda Environment
-
-Create a directory for Conda environments:
+Create a directory for the Conda environments:
 
 ```bash
 mkdir -p /mnt/fastscratch/users/$USER/conda_envs
 ```
 
-Initialise Conda in the current shell:
+Initialise Conda in the current Bash shell:
 
 ```bash
-source "$(conda info --base)/etc/profile.d/conda.sh"
+eval "$(conda shell.bash hook)"
 ```
 
-Create the YOLO environment:
+After this command, the shell prompt may begin with:
+
+```text
+(base)
+```
+
+This indicates that Conda has been initialised successfully.
+
+Create a new Conda environment containing Python 3.11 and pip:
 
 ```bash
 conda create \
@@ -313,96 +325,183 @@ conda create \
     -y
 ```
 
-Activate it:
+Activate the environment:
 
 ```bash
 conda activate /mnt/fastscratch/users/$USER/conda_envs/yolo
 ```
 
-Check the environment:
+Check the active Python environment:
 
 ```bash
 which python
 python --version
-which pip
+python -m pip --version
 ```
 
-The Python path should look similar to:
+The expected output is similar to:
 
 ```text
 /mnt/fastscratch/users/sgzjia25/conda_envs/yolo/bin/python
+Python 3.11.15
+pip 26.2 from /mnt/fastscratch/users/sgzjia25/conda_envs/yolo/lib/python3.11/site-packages/pip
 ```
 
-It should not be:
+The shell prompt should also begin with the environment path:
+
+```text
+(/mnt/fastscratch/users/sgzjia25/conda_envs/yolo)
+```
+
+The Python path must not be:
 
 ```text
 /usr/bin/python
 ```
 
-If it still shows `/usr/bin/python`, the Conda environment has not been activated correctly.
+If `/usr/bin/python` is shown, the Conda environment has not been activated correctly.
+
+Do not run `conda create` again after the environment has been created. For future sessions, only load Miniforge, initialise Conda and activate the existing environment:
+
+```bash
+module load miniforge3/25.3.0-python3.12.10-dynamic
+eval "$(conda shell.bash hook)"
+conda activate /mnt/fastscratch/users/$USER/conda_envs/yolo
+```
 
 ---
 
-# Step 8: Install PyTorch and Ultralytics
+## Step 8: Install PyTorch and Ultralytics
 
-Your previous Barkla setup used:
+Make sure the Miniforge module is loaded and the YOLO environment is activated:
 
 ```bash
-module load cuda/12.8.0-gcc14.2.0
+module load miniforge3/25.3.0-python3.12.10-dynamic
+eval "$(conda shell.bash hook)"
+conda activate /mnt/fastscratch/users/$USER/conda_envs/yolo
 ```
 
-Check whether that module is still available:
+Confirm that the correct Python interpreter is active:
+
+```bash
+which python
+```
+
+The output should be:
+
+```text
+/mnt/fastscratch/users/sgzjia25/conda_envs/yolo/bin/python
+```
+
+### 8.1 Check the Barkla CUDA module
+
+Check whether the CUDA 12.8 module is available:
 
 ```bash
 module spider cuda/12.8.0-gcc14.2.0
 ```
 
-Load it:
+Load it if it is available:
 
 ```bash
 module load cuda/12.8.0-gcc14.2.0
 ```
 
-Initialise and activate Conda:
+Check the CUDA compiler module:
 
 ```bash
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate /mnt/fastscratch/users/$USER/conda_envs/yolo
+nvcc --version
 ```
 
-Upgrade the installation tools:
+Loading the CUDA module is useful for software that compiles CUDA extensions. The PyTorch wheel installed below contains its required CUDA runtime libraries, but the GPU compute node must still provide a compatible NVIDIA driver.
 
-```bash
-python -m pip install --upgrade pip setuptools wheel
-```
+### 8.2 Install PyTorch with CUDA 12.8 support
 
-Install a CUDA-enabled PyTorch build compatible with the CUDA environment used on Barkla.
-
-For example:
+Install the fixed PyTorch and Torchvision versions:
 
 ```bash
 python -m pip install \
-    torch \
-    torchvision \
+    torch==2.8.0 \
+    torchvision==0.23.0 \
     --index-url https://download.pytorch.org/whl/cu128
 ```
 
-Then install Ultralytics:
+These fixed versions provide a reproducible PyTorch 2.8.0 environment with CUDA 12.8 support.
 
-```bash
-python -m pip install ultralytics
-```
-
-Check PyTorch:
+Check the installation:
 
 ```bash
 python -c "import torch; print('PyTorch:', torch.__version__); print('PyTorch CUDA:', torch.version.cuda)"
 ```
 
-Check Ultralytics:
+The expected output is similar to:
+
+```text
+PyTorch: 2.8.0+cu128
+PyTorch CUDA: 12.8
+```
+
+### 8.3 Install Ultralytics YOLO
+
+Install Ultralytics after PyTorch:
 
 ```bash
-python -c "from ultralytics import YOLO; print('Ultralytics import successful')"
+python -m pip install ultralytics
+```
+
+Check the installation:
+
+```bash
+python -c "import ultralytics; print('Ultralytics:', ultralytics.__version__)"
+```
+
+Check that the YOLO class can be imported:
+
+```bash
+python -c "from ultralytics import YOLO; print('Ultralytics YOLO import successful')"
+```
+
+### 8.4 Check GPU availability
+
+Run:
+
+```bash
+python -c "import torch; print('PyTorch:', torch.__version__); print('PyTorch CUDA:', torch.version.cuda); print('CUDA available:', torch.cuda.is_available())"
+```
+
+On the Barkla login node, the output may contain:
+
+```text
+CUDA available: False
+```
+
+This does not necessarily indicate an installation problem. The login node normally does not provide an allocated GPU.
+
+The final GPU check should be performed inside a Slurm job running on a GPU compute node:
+
+```bash
+python -c "import torch; print('CUDA available:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No GPU allocated')"
+```
+
+When the Slurm job has successfully received a GPU, the expected output is similar to:
+
+```text
+CUDA available: True
+GPU: NVIDIA ...
+```
+
+### 8.5 Record the installed package versions
+
+After completing the installation, save the package versions:
+
+```bash
+python -m pip freeze > yolo_requirements.txt
+```
+
+Check the important installed packages:
+
+```bash
+python -m pip list | grep -iE "torch|torchvision|ultralytics"
 ```
 
 ## `CUDA available: False` on a login node
