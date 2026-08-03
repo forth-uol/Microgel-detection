@@ -50,12 +50,17 @@ WinSCP is used to:
 * Browse files on Barkla using a graphical interface.
 
 Download WinSCP from its official website and install it using the default settings.
+https://winscp.net/eng/download.php
+
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/14b9c3de-3741-4af3-adf7-3b36c3204274" />
 
 ## 1.2 Install WindTerm
 
 WindTerm is used as the SSH terminal for connecting to Barkla.
 
 Download the Windows x86-64 portable ZIP package from the official WindTerm GitHub Releases page.
+
+https://github.com/kingToolbox/WindTerm/releases/tag/2.7.0
 
 The file name will usually look similar to:
 
@@ -88,59 +93,22 @@ Session
 Enter the following details:
 
 ```text
-Session Name: Barkla
 Host: barklalogin2.liv.ac.uk
 Port: 22
-User: sgzjia25
 ```
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/2b30c784-1543-46e9-82b7-6fa95ba90c43" />
 
-Select password authentication and click:
-
-```text
-Connect
-```
+Enter school account name and password
 
 Enter your University of Liverpool MWS password.
-
-The first time you connect, WindTerm may ask you to confirm the server fingerprint. Check that the hostname is:
-
-```text
-barklalogin2.liv.ac.uk
-```
-
-Then accept the fingerprint.
 
 If the connection times out while you are outside the university network, connect to the University of Liverpool VPN first and try again.
 
 ## Check the connection
 
-After logging in, run:
+After logging in,
 
-```bash
-whoami
-hostname
-pwd
-```
-
-The command:
-
-```bash
-whoami
-```
-
-should return:
-
-```text
-sgzjia25
-```
-
-The command:
-
-```bash
-hostname
-```
-
-should show a Barkla login node.
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/a4b48d5e-115c-4832-acf8-7211b8df7a9d" />
 
 ---
 
@@ -148,57 +116,24 @@ should show a Barkla login node.
 
 In WindTerm, run:
 
-```bash
-PROJECT=/mnt/fastscratch/users/$USER/yolo_project
-
-mkdir -p "$PROJECT"
-mkdir -p "$PROJECT/dataset"
-mkdir -p "$PROJECT/logs"
-mkdir -p "$PROJECT/runs"
-mkdir -p "$PROJECT/scripts"
-
-cd "$PROJECT"
-
-pwd
-ls -lah
-```
-
-The working directory should be:
-
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project
-```
-
-The project structure will be:
-
-```text
-yolo_project/
-├── dataset/
-├── logs/
-├── runs/
-└── scripts/
-```
-
-The folders are used as follows:
-
-```text
-dataset/   Training and validation data
-logs/      SLURM output and error logs
-runs/      YOLO training results
-scripts/   Optional Python and shell scripts
+ls
+cd fastscratch
+mkdir example
+ls
 ```
 
 Using `fastscratch` is preferable for large datasets, model checkpoints and training outputs.
 
----
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/60bd31b8-8f2a-4fe0-965d-7e84dcdd87fe" />
+
 
 # Step 4: Connect to Barkla Using WinSCP
 
-Open WinSCP and select:
+Open WinSCP 
 
-```text
-New Site
-```
+<img width="808" height="516" alt="image" src="https://github.com/user-attachments/assets/07ab27e5-7149-4f82-be5c-dc9b7eb2a9df" />
+
 
 Enter:
 
@@ -206,30 +141,30 @@ Enter:
 File protocol: SFTP
 Host name: barklalogin2.liv.ac.uk
 Port number: 22
-User name: sgzjia25
+User name: Your university name
 Password: Your university password
 ```
 
 Click:
 
 ```text
+Save
+Ok
 Login
 ```
 
 Accept the server fingerprint if prompted.
+
+<img width="806" height="518" alt="image" src="https://github.com/user-attachments/assets/a2b3cfb3-faea-4e53-80d9-ab5608bea83a" />
 
 After connecting:
 
 * The left-hand side shows files on your Windows computer.
 * The right-hand side shows files on Barkla.
 
-In the remote path bar, enter:
-
-```text
-/mnt/fastscratch/users/sgzjia25/yolo_project
-```
-
 You can now drag files between Windows and Barkla.
+
+<img width="809" height="521" alt="image" src="https://github.com/user-attachments/assets/f2c6d699-a3a6-45e0-b384-36aaa14f3c7e" />
 
 ---
 
@@ -261,30 +196,19 @@ The image and label must have the same base filename.
 
 ## Upload the dataset
 
-Use WinSCP to upload your dataset to:
+Use WinSCP to upload your dataset
 
-```text
-/mnt/fastscratch/users/sgzjia25/yolo_project/dataset
-```
-
-The remote structure should become:
-
-```text
-/mnt/fastscratch/users/sgzjia25/yolo_project/dataset/images/train
-/mnt/fastscratch/users/sgzjia25/yolo_project/dataset/images/val
-/mnt/fastscratch/users/sgzjia25/yolo_project/dataset/labels/train
-/mnt/fastscratch/users/sgzjia25/yolo_project/dataset/labels/val
-```
+<img width="809" height="521" alt="image" src="https://github.com/user-attachments/assets/ee2b1b0d-15ff-44f3-9c24-dcf913ad68ef" />
 
 ## Create `data.yaml`
 
 In WindTerm, run:
 
 ```bash
-cd /mnt/fastscratch/users/sgzjia25/yolo_project
+cd /mnt/fastscratch/users/sgzjia25/example/dataset
 
-cat > dataset/data.yaml <<'YAML'
-path: /mnt/fastscratch/users/sgzjia25/yolo_project/dataset
+nano data.yalm
+path: /mnt/fastscratch/users/sgzjia25/example/dataset
 
 train: images/train
 val: images/val
@@ -293,113 +217,77 @@ names:
   0: microgel
 YAML
 ```
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/e852dc3b-128e-49b8-bc1a-dcf9362fd216" />
+
+Press Ctrl+O（save), Enter, Ctrl+X(exit)
 
 Display the file:
 
 ```bash
-cat dataset/data.yaml
+cat data.yaml
 ```
+<img width="376" height="142" alt="image" src="https://github.com/user-attachments/assets/0119ebe0-d1f7-4a9f-99d5-b54ca38f04d0" />
 
-Do not use a Windows path such as:
 
-```text
-E:\Livesurf\Total
-```
+## Step 6: Load the Conda Module on Barkla
 
-Barkla runs Linux, so the dataset path must use Linux format:
-
-```text
-/mnt/fastscratch/users/sgzjia25/...
-```
-
-## Check the uploaded data
-
-Display a few image and label files:
-
-```bash
-find dataset/images/train -type f | head
-find dataset/labels/train -type f | head
-```
-
-Count the files:
-
-```bash
-echo "Training images:"
-find dataset/images/train -type f | wc -l
-
-echo "Training labels:"
-find dataset/labels/train -type f | wc -l
-
-echo "Validation images:"
-find dataset/images/val -type f | wc -l
-
-echo "Validation labels:"
-find dataset/labels/val -type f | wc -l
-```
-
-The number of images and labels should normally be similar.
-
-Images containing no target objects may have an empty `.txt` label file, depending on how you organised the dataset.
-
----
-
-# Step 6: Find the Conda Module on Barkla
-
-Your previous notes contain these commands:
+The previous commands:
 
 ```bash
 module load python/3.11.9-gcc14.2.0
 source ~/yolo_project/yolo_env/bin/activate
 ```
 
-These commands activate a Python virtual environment, not a Conda environment.
+activate a standard Python virtual environment rather than a Conda environment.
 
-Do not mix the old Python virtual environment with the new Conda environment.
+Do not load the old Python module or activate the old `yolo_env` virtual environment when using the new Conda environment.
 
-First, search for the available Anaconda or Miniconda module:
-
-```bash
-module spider Anaconda
-```
-
-If that does not return anything, try:
+First, search for the available Conda-related modules:
 
 ```bash
-module spider anaconda
-module spider Miniconda
-module avail 2>&1 | grep -iE "anaconda|miniconda|conda"
+module --ignore-cache spider 2>&1 | grep -iE "anaconda|miniconda|miniforge|conda|python"
+module spider miniforge3
 ```
 
-The output may show a module name such as:
+On Barkla, the available Miniforge module includes:
 
 ```text
-Anaconda3/some-version
+miniforge3/25.3.0-python3.12.10-dynamic
 ```
 
-or:
-
-```text
-anaconda/some-version
-```
-
-Load the exact module name shown by Barkla. For example:
+Load this module:
 
 ```bash
-module load Anaconda3
+module load miniforge3/25.3.0-python3.12.10-dynamic
 ```
 
-This is only an example. Use the exact module name returned by `module spider`.
+Barkla may display an informational message explaining that this is a dynamic Miniforge installation. This is not an error.
 
-Check Conda:
+Check that Conda has loaded correctly:
 
 ```bash
 which conda
 conda --version
 ```
 
-If these commands show a valid Conda path and version, the module has loaded successfully.
+The expected output is similar to:
 
----
+```text
+/opt/apps/pkg/tools/miniforge3/25.3.0_python3.12.10_dynamic/bin/conda
+conda 25.7.0
+```
+
+If a valid Conda path and version are displayed, the Miniforge module has loaded successfully.
+
+Do not run the following old commands:
+
+```bash
+module load python/3.11.9-gcc14.2.0
+source ~/yolo_project/yolo_env/bin/activate
+```
+
+They belong to the old Python virtual environment and should not be mixed with the new Conda environment.
+
 
 # Step 7: Create the Conda Environment
 
