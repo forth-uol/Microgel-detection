@@ -365,11 +365,10 @@ conda activate /mnt/fastscratch/users/$USER/conda_envs/yolo
 
 Step 8: Install PyTorch and Ultralytics
 
-## 8.1 Set the paths for the current terminal session
+8.1 Set the paths for the current terminal session
 
 Run the following commands in WindTerm:
 
-```bash
 export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
 export YOLO_ENV="/mnt/fastscratch/users/$USER/conda_envs/yolo"
 
@@ -379,62 +378,48 @@ mkdir -p "$PROJECT/weights"
 
 cd "$PROJECT"
 pwd
-```
 
-`pwd` should display:
+pwd should display:
 
-```text
 /mnt/fastscratch/users/sgzjia25/yolo_project
-```
 
-## 8.2 Load and activate the Conda environment
+8.2 Load and activate the Conda environment
 
-```bash
 module load miniforge3/25.3.0-python3.12.10-dynamic
 eval "$(conda shell.bash hook)"
 conda activate "$YOLO_ENV"
-```
 
 Check the current Python installation:
 
-```bash
 which python
 python --version
 python -m pip --version
-```
 
-`which python` should display something similar to:
+which python should display something similar to:
 
-```text
 /mnt/fastscratch/users/sgzjia25/conda_envs/yolo/bin/python
-```
 
-If it displays `/usr/bin/python`, do not continue with the installation. Reload Miniforge and activate the Conda environment first.
+If it displays /usr/bin/python, do not continue with the installation. Reload Miniforge and activate the Conda environment first.
 
-## 8.3 Install PyTorch with CUDA 12.8 support
+8.3 Install PyTorch with CUDA 12.8 support
 
-```bash
 python -m pip install \
     torch==2.8.0 \
     torchvision==0.23.0 \
     --index-url https://download.pytorch.org/whl/cu128
-```
 
 This is an officially supported PyTorch version combination.
 
-## 8.4 Install a fixed version of Ultralytics
+8.4 Install a fixed version of Ultralytics
 
 To make the environment reproducible, this guide uses the following fixed version:
 
-```bash
 python -m pip install ultralytics==8.4.102
-```
 
 This is the version used when this guide was written. If you need to upgrade it later, verify the new version with a short test job first. Do not upgrade immediately before a production training run.
 
-## 8.5 Verify the installation
+8.5 Verify the installation
 
-```bash
 python -m pip check
 
 python -c "import torch; print('PyTorch:', torch.__version__); print('Built CUDA:', torch.version.cuda)"
@@ -442,46 +427,34 @@ python -c "import torch; print('PyTorch:', torch.__version__); print('Built CUDA
 python -c "import ultralytics; print('Ultralytics:', ultralytics.__version__)"
 
 python -c "from ultralytics import YOLO; print('YOLO import successful')"
-```
 
 The expected output should look similar to:
 
-```text
 PyTorch: 2.8.0+cu128
 Built CUDA: 12.8
 Ultralytics: 8.4.102
 YOLO import successful
-```
 
-When you run the following command on a login node, the result may be `False`:
+When you run the following command on a login node, the result may be False:
 
-```bash
 python -c "import torch; print(torch.cuda.is_available())"
-```
 
 This is normal because no GPU has been allocated to the current terminal session on the login node. The final GPU check must be performed inside a Slurm GPU job.
 
-## 8.6 Save the environment versions
+8.6 Save the environment versions
 
-```bash
 python -m pip freeze > "$PROJECT/yolo_requirements.txt"
-```
 
 Check the file:
 
-```bash
 grep -iE "torch|torchvision|ultralytics" "$PROJECT/yolo_requirements.txt"
-```
 
----
+Step 9: Check the dataset and download the model in advance
 
-# Step 9: Check the dataset and download the model in advance
-
-## 9.1 Confirm the dataset path
+9.1 Confirm the dataset path
 
 The final dataset structure should be:
 
-```text
 yolo_project/
 ├── dataset/
 │   ├── images/
@@ -495,11 +468,9 @@ yolo_project/
 ├── weights/
 ├── train.py
 └── train.slurm
-```
 
 Check the actual directories:
 
-```bash
 cd "$PROJECT"
 
 test -f dataset/data.yaml && echo "data.yaml exists"
@@ -507,85 +478,65 @@ test -d dataset/images/train && echo "training images directory exists"
 test -d dataset/images/val && echo "validation images directory exists"
 test -d dataset/labels/train && echo "training labels directory exists"
 test -d dataset/labels/val && echo "validation labels directory exists"
-```
 
-Display `data.yaml`:
+Display data.yaml:
 
-```bash
 cat dataset/data.yaml
-```
 
 Its contents should be:
 
-```yaml
 path: /mnt/fastscratch/users/sgzjia25/yolo_project/dataset
 train: images/train
 val: images/val
 
 names:
   0: microgel
-```
 
-Do not write the heredoc closing marker `YAML` into `data.yaml`.
+Do not write the heredoc closing marker YAML into data.yaml.
 
-## 9.2 Check the numbers of images and labels
+9.2 Check the numbers of images and labels
 
-```bash
 find dataset/images/train -type f | wc -l
 find dataset/labels/train -type f -name '*.txt' | wc -l
 
 find dataset/images/val -type f | wc -l
 find dataset/labels/val -type f -name '*.txt' | wc -l
-```
 
-Images that contain no objects may have no label file. Images that contain objects should have a `.txt` file with the same base name. For example:
+Images that contain no objects may have no label file. Images that contain objects should have a .txt file with the same base name. For example:
 
-```text
 images/train/image001.jpg
 labels/train/image001.txt
-```
 
 Each detection-label line should use the following format:
 
-```text
 class_id x_center y_center width height
-```
 
-All four coordinate values must be normalized to the range `0–1`.
+All four coordinate values must be normalized to the range 0–1.
 
-## 9.3 Download the YOLO26 weights in advance
+9.3 Download the YOLO26 weights in advance
 
 Do not rely on a GPU compute node having internet access. Download the model before submitting the job.
 
-```bash
 cd "$PROJECT/weights"
 
 python -c "from ultralytics import YOLO; YOLO('yolo26m.pt'); print('YOLO26m is ready')"
 
 ls -lh yolo26m.pt
-```
 
 The following file must exist:
 
-```text
 /mnt/fastscratch/users/sgzjia25/yolo_project/weights/yolo26m.pt
-```
 
-If the Barkla login node cannot access the model download URL, you can download the weights on Windows and then upload them to the `weights` directory using WinSCP.
+If the Barkla login node cannot access the model download URL, you can download the weights on Windows and then upload them to the weights directory using WinSCP.
 
----
-
-# Step 10: Create the training program `train.py`
+Step 10: Create the training program train.py
 
 Enter the project directory:
 
-```bash
 cd "$PROJECT"
-```
 
 Create the file:
 
-```bash
 cat > train.py <<'PY'
 import argparse
 import os
@@ -686,76 +637,54 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 PY
-```
 
 The model path is fixed to the following location inside the project:
 
-```text
 weights/yolo26m.pt
-```
 
 Therefore, the training job will not attempt to download the model from the internet.
 
 Each Slurm job uses a separate results directory:
 
-```text
 runs/microgel_yolo26m_JOBID
-```
 
-For example, if the Job ID is `123456`, the results directory will be:
+For example, if the Job ID is 123456, the results directory will be:
 
-```text
 runs/microgel_yolo26m_123456
-```
 
----
-
-# Step 11: Check Barkla GPU partitions and modules
+Step 11: Check Barkla GPU partitions and modules
 
 First, view the GPU partitions:
 
-```bash
 sinfo -o "%20P %15a %20G %15l" | grep -i gpu
-```
 
 This guide uses:
 
-```text
 gpu-a-lowsmall
-```
 
 Confirm that this partition currently exists:
 
-```bash
 sinfo -p gpu-a-lowsmall
 scontrol show partition gpu-a-lowsmall
-```
 
 Confirm that the required modules still exist:
 
-```bash
 module spider miniforge3/25.3.0-python3.12.10-dynamic
 module spider cuda/12.8.0-gcc14.2.0
-```
 
-If a partition or module does not exist, do not guess its name. Use the current names shown by `sinfo` and `module spider` to update the Slurm file in the next step.
+If a partition or module does not exist, do not guess its name. Use the current names shown by sinfo and module spider to update the Slurm file in the next step.
 
-The PyTorch `cu128` wheel already includes the required CUDA runtime libraries. Loading the CUDA module mainly provides compilation tools or satisfies Barkla's software-environment requirements. If the CUDA module conflicts with PyTorch libraries, remove the CUDA-module line from the Slurm file only after confirming this with the administrators.
+The PyTorch cu128 wheel already includes the required CUDA runtime libraries. Loading the CUDA module mainly provides compilation tools or satisfies Barkla's software-environment requirements. If the CUDA module conflicts with PyTorch libraries, remove the CUDA-module line from the Slurm file only after confirming this with the administrators.
 
----
-
-# Step 12: Create the Slurm job file `train.slurm`
+Step 12: Create the Slurm job file train.slurm
 
 First, make sure that the log directory exists:
 
-```bash
 mkdir -p /mnt/fastscratch/users/sgzjia25/yolo_project/logs
 cd /mnt/fastscratch/users/sgzjia25/yolo_project
-```
 
 Create the job file:
 
-```bash
 cat > train.slurm <<'SLURM'
 #!/bin/bash -l
 
@@ -849,61 +778,45 @@ echo "Finish time: $(date)"
 echo "Training command completed"
 echo "========================================"
 SLURM
-```
 
-Note: `#SBATCH` lines do not expand the `$USER` variable, so these lines use the full path containing the username.
+Note: #SBATCH lines do not expand the $USER variable, so these lines use the full path containing the username.
 
----
-
-# Step 13: Pre-submission checks
+Step 13: Pre-submission checks
 
 If the files were uploaded from Windows, first remove CRLF line endings:
 
-```bash
 cd "$PROJECT"
 sed -i 's/\r$//' train.py train.slurm
-```
 
 Check the Python syntax:
 
-```bash
 python -m py_compile train.py
-```
 
 Check the shell syntax:
 
-```bash
 bash -n train.slurm
-```
 
 Confirm the key files:
 
-```bash
 test -f train.py && echo "train.py OK"
 test -f train.slurm && echo "train.slurm OK"
 test -f dataset/data.yaml && echo "data.yaml OK"
 test -f weights/yolo26m.pt && echo "model OK"
 test -d logs && echo "logs directory OK"
-```
 
 View the final files:
 
-```bash
 sed -n '1,240p' train.py
 sed -n '1,260p' train.slurm
-```
 
-`py_compile` and `bash -n` check syntax only. They cannot verify the GPU partition, modules, dataset contents, or whether the available GPU memory is sufficient. You must therefore still run a short test job first.
+py_compile and bash -n check syntax only. They cannot verify the GPU partition, modules, dataset contents, or whether the available GPU memory is sufficient. You must therefore still run a short test job first.
 
----
-
-# Step 14: Submit a short one-epoch test job first
+Step 14: Submit a short one-epoch test job first
 
 Do not start with 100 epochs at a resolution of 1920 on the first attempt.
 
 Test the complete workflow with 1 epoch, a resolution of 640, and batch size 2:
 
-```bash
 cd "$PROJECT"
 
 JOBID=$(sbatch --parsable \
@@ -914,51 +827,37 @@ JOBID="${JOBID%%;*}"
 printf '%s\n' "$JOBID" > .last_job_id
 
 echo "Submitted test job: $JOBID"
-```
 
 Check the status:
 
-```bash
 squeue -j "$JOBID" -o "%.18i %.18P %.25j %.8T %.10M %.10l %.30R"
-```
 
 After the test job has finished, check it with:
 
-```bash
 sacct -j "$JOBID" \
     --format=JobID,JobName,Partition,State,Elapsed,MaxRSS,AllocTRES,ExitCode
-```
 
 The desired state is:
 
-```text
 COMPLETED
-```
 
 The following files should also be generated:
 
-```text
 runs/microgel_yolo26m_JOBID/weights/best.pt
 runs/microgel_yolo26m_JOBID/weights/last.pt
-```
 
 Proceed to production training only after the short test has succeeded.
 
----
+Step 15: Submit the production training job
 
-# Step 15: Submit the production training job
+The default parameters in train.slurm are:
 
-The default parameters in `train.slurm` are:
-
-```text
 epochs = 100
 imgsz = 1920
 batch = -1 (automatic estimation)
-```
 
 Submit the production training job:
 
-```bash
 cd "$PROJECT"
 
 JOBID=$(sbatch --parsable train.slurm)
@@ -966,11 +865,9 @@ JOBID="${JOBID%%;*}"
 
 printf '%s\n' "$JOBID" > .last_job_id
 echo "Submitted production job: $JOBID"
-```
 
 To start with the more conservative resolution of 1280, run:
 
-```bash
 JOBID=$(sbatch --parsable \
     --export=ALL,YOLO_EPOCHS=100,YOLO_IMGSZ=1280,YOLO_BATCH=-1 \
     train.slurm)
@@ -978,153 +875,118 @@ JOBID=$(sbatch --parsable \
 JOBID="${JOBID%%;*}"
 printf '%s\n' "$JOBID" > .last_job_id
 echo "Submitted production job: $JOBID"
-```
 
-This uses `--export` to override the training parameters, so you do not need to edit `train.py` or `train.slurm` repeatedly.
+This uses --export to override the training parameters, so you do not need to edit train.py or train.slurm repeatedly.
 
----
-
-# Step 16: Check the status, node, and GPU
+Step 16: Check the status, node, and GPU
 
 After logging in to WindTerm again, you can restore the most recently saved Job ID:
 
-```bash
 export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
 cd "$PROJECT"
 JOBID=$(cat .last_job_id)
 echo "$JOBID"
-```
 
 View the job:
 
-```bash
 squeue -j "$JOBID" -o "%.18i %.18P %.25j %.8T %.10M %.10l %.30R"
-```
 
 Common states:
 
-```text
 PD = Pending, waiting for resources
 R  = Running
 CG = Completing
-```
 
-When the job is in `PD`, the final column may show:
+When the job is in PD, the final column may show:
 
-```text
 (Resources)
 (Priority)
-```
 
 This usually means the job is waiting in the queue and does not indicate that the program has failed.
 
-After the job changes to `R`, obtain its node using the Job ID:
+After the job changes to R, obtain its node using the Job ID:
 
-```bash
 NODE=$(squeue -h -j "$JOBID" -t R -o "%N")
 echo "Running node: $NODE"
-```
 
 Do not use the node of the "first running job under the current account," because the account may have several different jobs running at the same time.
 
-View the node resources:
+Barkla's node-usage.sh accepts one optional mode argument:
 
-```bash
-node-usage.sh "$NODE"
-```
+all = show all nodes
+cpu = show CPU-only nodes
+gpu = show GPU nodes
 
-If Barkla's `node-usage.sh` accepts only a number:
+It does not accept a node name as its argument. To show all GPU nodes, run:
 
-```bash
-NODE_NUMBER="${NODE//[!0-9]/}"
-node-usage.sh "$NODE_NUMBER"
-```
+node-usage.sh gpu
 
-Refresh the information every five seconds:
+To display only the GPU node running this specific job while preserving the table header, run:
 
-```bash
-watch -n 5 "node-usage.sh $NODE"
-```
+node-usage.sh gpu | grep -E "^NODE|^----|^${NODE}[[:space:]]"
 
-Press `Ctrl+C` to stop refreshing.
+Refresh the selected node information every five seconds:
 
----
+watch -n 5 "node-usage.sh gpu | grep -E '^NODE|^----|^${NODE}[[:space:]]'"
 
-# Step 17: View the logs
+Press Ctrl+C to stop refreshing. This does not stop the Slurm training job.
+
+Step 17: View the logs
 
 After the job starts running:
 
-```bash
 cd "$PROJECT"
 ls -lh logs/*"$JOBID"*
-```
 
 View standard output:
 
-```bash
 tail -f logs/yolo_microgel.*."$JOBID".out
-```
 
 View standard error:
 
-```bash
 tail -f logs/yolo_microgel.*."$JOBID".err
-```
 
-Press `Ctrl+C` to stop following the log. This does not stop the training job.
+Press Ctrl+C to stop following the log. This does not stop the training job.
 
 Search for common errors:
 
-```bash
 grep -iE \
     "error|exception|traceback|out of memory|killed|failed" \
     logs/*"$JOBID"*
-```
 
 The beginning of the job log should contain output similar to:
 
-```text
 CUDA available: True
 GPU: NVIDIA ...
-```
 
-If the job displays `CUDA available: False`, the Slurm job should exit immediately instead of continuing to train on the CPU.
+If the job displays CUDA available: False, the Slurm job should exit immediately instead of continuing to train on the CPU.
 
----
+Step 18: Check completion status, resume training, and cancel jobs
 
-# Step 18: Check completion status, resume training, and cancel jobs
+18.1 Check the status after the job ends
 
-## 18.1 Check the status after the job ends
-
-```bash
 sacct -j "$JOBID" \
     --format=JobID,JobName,Partition,State,Elapsed,MaxRSS,AllocTRES,ExitCode
-```
 
 Main states:
 
-```text
 COMPLETED      Finished successfully
 FAILED         Program failed; check the logs
 OUT_OF_MEMORY  Insufficient memory
 TIMEOUT        Reached the Slurm time limit
 CANCELLED      Job was cancelled
-```
 
-## 18.2 Resume training from `last.pt`
+18.2 Resume training from last.pt
 
-Assume that the original Job ID is `123456`:
+Assume that the original Job ID is 123456:
 
-```bash
 OLD_JOBID=123456
 LAST_PT="$PROJECT/runs/microgel_yolo26m_${OLD_JOBID}/weights/last.pt"
 
 test -f "$LAST_PT" && echo "Checkpoint found: $LAST_PT"
-```
 
 Submit the resume job:
 
-```bash
 JOBID=$(sbatch --parsable \
     --export=ALL,YOLO_RESUME="$LAST_PT" \
     train.slurm)
@@ -1133,60 +995,44 @@ JOBID="${JOBID%%;*}"
 printf '%s\n' "$JOBID" > .last_job_id
 
 echo "Submitted resume job: $JOBID"
-```
 
-`resume=True` restores the epoch, optimizer, learning-rate scheduler, and other training states. It is not equivalent to loading only the model weights and starting a new experiment.
+resume=True restores the epoch, optimizer, learning-rate scheduler, and other training states. It is not equivalent to loading only the model weights and starting a new experiment.
 
-## 18.3 Cancel a job
+18.3 Cancel a job
 
 Cancel a specific job:
 
-```bash
 scancel "$JOBID"
-```
 
 Then check:
 
-```bash
 squeue -j "$JOBID"
-```
 
 The command for cancelling all jobs under the current account is:
 
-```bash
 scancel -u "$USER"
-```
 
 Do not use this command casually, because it cancels every running and queued job under the account.
 
----
-
-# Step 19: Locate the training results
+Step 19: Locate the training results
 
 After the production job has finished:
 
-```bash
 RUN_DIR="$PROJECT/runs/microgel_yolo26m_${JOBID}"
 
 find "$RUN_DIR" -maxdepth 2 -type f | sort
-```
 
 The model weights are located in:
 
-```bash
 ls -lh "$RUN_DIR/weights"
-```
 
 Main files:
 
-```text
 best.pt  The model with the best validation-set performance
 last.pt  The checkpoint from the final completed epoch
-```
 
 Other common result files include:
 
-```text
 results.csv
 results.png
 confusion_matrix.png
@@ -1195,64 +1041,51 @@ F1_curve.png
 P_curve.png
 R_curve.png
 args.yaml
-```
 
 Do not judge training success only by the existence of files. Also confirm all of the following:
 
-- The `sacct` state is `COMPLETED`.
-- The logs contain no traceback or out-of-memory error.
-- `results.csv` contains reasonable training and validation metrics.
-- The size of `best.pt` is not 0 bytes.
+The sacct state is COMPLETED.
+
+The logs contain no traceback or out-of-memory error.
+
+results.csv contains reasonable training and validation metrics.
+
+The size of best.pt is not 0 bytes.
 
 Check the file:
 
-```bash
 test -s "$RUN_DIR/weights/best.pt" && echo "best.pt exists and is not empty"
-```
 
----
-
-# Step 20: Download the results using WinSCP
+Step 20: Download the results using WinSCP
 
 Connect in WinSCP using:
 
-```text
 barklalogin2.liv.ac.uk
-```
 
 Open the results directory for the corresponding Job ID:
 
-```text
 /mnt/fastscratch/users/sgzjia25/yolo_project/runs/microgel_yolo26m_JOBID/weights
-```
 
 Download:
 
-```text
 best.pt
 last.pt
-```
 
 It is also recommended to download:
 
-```text
 results.csv
 results.png
 confusion_matrix.png
 PR_curve.png
 F1_curve.png
 args.yaml
-```
 
-`fastscratch` should not be treated as the only long-term backup location. After training finishes, download important weights and results to Windows as soon as possible, or copy them to a university-approved long-term storage location.
+fastscratch should not be treated as the only long-term backup location. After training finishes, download important weights and results to Windows as soon as possible, or copy them to a university-approved long-term storage location.
 
----
+Most frequently used commands after each login
 
-# Most frequently used commands after each login
+Load the environment
 
-## Load the environment
-
-```bash
 export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
 export YOLO_ENV="/mnt/fastscratch/users/$USER/conda_envs/yolo"
 
@@ -1261,271 +1094,131 @@ eval "$(conda shell.bash hook)"
 conda activate "$YOLO_ENV"
 
 cd "$PROJECT"
-```
 
-## Submit production training
+Submit production training
 
-```bash
 JOBID=$(sbatch --parsable train.slurm)
 JOBID="${JOBID%%;*}"
 printf '%s\n' "$JOBID" > .last_job_id
 echo "$JOBID"
-```
 
-## Restore the Job ID
+Restore the Job ID
 
-```bash
 cd /mnt/fastscratch/users/$USER/yolo_project
 JOBID=$(cat .last_job_id)
 echo "$JOBID"
-```
 
-## View the status
+View the status
 
-```bash
 squeue -j "$JOBID" -o "%.18i %.18P %.25j %.8T %.10M %.10l %.30R"
-```
 
-## View the node
+View the node
 
-```bash
 NODE=$(squeue -h -j "$JOBID" -t R -o "%N")
 echo "$NODE"
-```
 
-## View the log
+View the log
 
-```bash
 tail -f logs/yolo_microgel.*."$JOBID".out
-```
 
-## View the final status
+View the final status
 
-```bash
 sacct -j "$JOBID" \
     --format=JobID,JobName,Partition,State,Elapsed,MaxRSS,AllocTRES,ExitCode
-```
 
-## Cancel a specific job
+Cancel a specific job
 
-```bash
 scancel "$JOBID"
-```
 
----
+Common errors
 
-# Common errors
-
-## `Cannot find dataset configuration`
+Cannot find dataset configuration
 
 Check:
 
-```bash
 ls -lh /mnt/fastscratch/users/$USER/yolo_project/dataset/data.yaml
-```
 
-Make sure that the file has not been incorrectly named `data.yalm`.
+Make sure that the file has not been incorrectly named data.yalm.
 
-## `Cannot find pretrained model`
+Cannot find pretrained model
 
 Check:
 
-```bash
 ls -lh /mnt/fastscratch/users/$USER/yolo_project/weights/yolo26m.pt
-```
 
-## `CUDA available: False`
+CUDA available: False
 
 If this appears on a login node, it is usually normal.
 
 If this appears in a Slurm GPU-job log, check:
 
-```bash
 scontrol show job "$JOBID"
-```
 
 Also confirm that the job actually requested:
 
-```text
 #SBATCH --gres=gpu:1
-```
 
-You should also check that `which python` points to the correct Conda environment.
+You should also check that which python points to the correct Conda environment.
 
-## `CUDA out of memory`
+CUDA out of memory
 
 First, reduce the image size. For example:
 
-```bash
 sbatch --export=ALL,YOLO_EPOCHS=100,YOLO_IMGSZ=1280,YOLO_BATCH=-1 train.slurm
-```
 
 If memory is still insufficient, use:
 
-```bash
 sbatch --export=ALL,YOLO_EPOCHS=100,YOLO_IMGSZ=960,YOLO_BATCH=1 train.slurm
-```
 
-## `Invalid CUDA 'device=0' requested`
+Invalid CUDA 'device=0' requested
 
-This usually means that the job did not receive a GPU, PyTorch was installed as a CPU-only build, or the GPU was not exposed correctly to the job. Check `nvidia-smi` and the PyTorch diagnostic output at the beginning of the Slurm log.
+This usually means that the job did not receive a GPU, PyTorch was installed as a CPU-only build, or the GPU was not exposed correctly to the job. Check nvidia-smi and the PyTorch diagnostic output at the beginning of the Slurm log.
 
-## The Slurm job remains in `PD`
+The Slurm job remains in PD
 
 Run:
 
-```bash
 squeue -j "$JOBID" -o "%.18i %.8T %.40R"
-```
 
-`Resources` or `Priority` usually means that the job is simply waiting for resources. If the output reports a partition, QOS, account, or resource-request error, modify `train.slurm` or contact the Barkla administrators.
+Resources or Priority usually means that the job is simply waiting for resources. If the output reports a partition, QOS, account, or resource-request error, modify train.slurm or contact the Barkla administrators.
 
-## The job state is `TIMEOUT`
+The job state is TIMEOUT
 
-Use `last.pt` in the corresponding run directory to resume training as described in Step 18. You can also confirm the maximum time allowed by the partition and then adjust the following setting as appropriate:
+Use last.pt in the corresponding run directory to resume training as described in Step 18. You can also confirm the maximum time allowed by the partition and then adjust the following setting as appropriate:
 
-```text
 #SBATCH --time=24:00:00
-```
 
----
+Important rules
 
-# Important rules
+Do not run the full python train.py command directly on barklalogin1 or barklalogin2.
 
-- Do not run the full `python train.py` command directly on `barklalogin1` or `barklalogin2`.
-- Login nodes should be used only for file management, lightweight checks, environment installation, script preparation, and job submission.
-- Production GPU training must use `sbatch train.slurm`.
-- The first training attempt must begin with a short test using 1 epoch and a resolution of 640.
-- Query the status, node, logs, and results by Job ID. Do not simply select the first running job under the account.
-- Do not rely on compute nodes to download pretrained models automatically.
-- Do not use `fastscratch` as the only backup location.
-- Do not assume training succeeded merely because `best.pt` exists; also check the `sacct` state and the logs.
+Login nodes should be used only for file management, lightweight checks, environment installation, script preparation, and job submission.
 
----
+Production GPU training must use sbatch train.slurm.
 
-# References
+The first training attempt must begin with a short test using 1 epoch and a resolution of 640.
 
-- Ultralytics YOLO26：https://docs.ultralytics.com/models/yolo26/
-- Ultralytics training parameters and resume training: https://docs.ultralytics.com/modes/train/
-- Ultralytics detection dataset format: https://docs.ultralytics.com/datasets/detect/
-- Installing previous PyTorch versions: https://pytorch.org/get-started/previous-versions/
-- Slurm `sbatch`：https://slurm.schedmd.com/sbatch.html
-- Slurm `squeue`：https://slurm.schedmd.com/squeue.html
+Query the status, node, logs, and results by Job ID. Do not simply select the first running job under the account.
 
-# Commands You Will Use Most Often
+Do not rely on compute nodes to download pretrained models automatically.
 
-## Enter the project directory
+Do not use fastscratch as the only backup location.
 
-```bash
-cd /mnt/fastscratch/users/sgzjia25/yolo_project
-```
+Do not assume training succeeded merely because best.pt exists; also check the sacct state and the logs.
 
-## Load the environment
+References
 
-```bash
-module purge
+Ultralytics YOLO26：https://docs.ultralytics.com/models/yolo26/
 
-module load Anaconda3
-module load cuda/12.8.0-gcc14.2.0
+Ultralytics training parameters and resume training: https://docs.ultralytics.com/modes/train/
 
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate /mnt/fastscratch/users/sgzjia25/conda_envs/yolo
-```
+Ultralytics detection dataset format: https://docs.ultralytics.com/datasets/detect/
 
-Replace `module load Anaconda3` with the actual module available on Barkla.
+Installing previous PyTorch versions: https://pytorch.org/get-started/previous-versions/
 
-## Submit training
+Slurm sbatch：https://slurm.schedmd.com/sbatch.html
 
-```bash
-sbatch train.slurm
-```
-
-## Check your jobs
-
-```bash
-squeue --me
-```
-
-## Check the allocated node
-
-```bash
-squeue -u $USER -t R -o "%.18i %.20j %.8T %.20N"
-```
-
-## Check GPU usage
-
-```bash
-NODE=$(squeue -h -u "$USER" -t R -o "%N" | head -n 1)
-node-usage.sh "$NODE"
-```
-
-## View logs
-
-```bash
-ls -lh logs
-tail -f logs/*.out
-```
-
-## Cancel a job
-
-```bash
-scancel JOB_ID
-```
-
-## Check the trained model
-
-```bash
-ls -lh runs/microgel_yolo26m/weights
-```
-
----
-
-# Important Rules
-
-Do not run full training directly on:
-
-```text
-barklalogin1
-barklalogin2
-```
-
-The login nodes should only be used for:
-
-* Uploading and organising files.
-* Creating environments.
-* Installing packages.
-* Editing scripts.
-* Submitting jobs.
-* Checking job status and logs.
-
-Start the actual GPU training through SLURM:
-
-```bash
-sbatch train.slurm
-```
-
-Do not start the full training with:
-
-```bash
-python train.py
-```
-
-directly on the login node.
-
-The normal workflow is:
-
-```text
-WindTerm login
-→ upload dataset using WinSCP
-→ create Conda environment
-→ write train.py
-→ write train.slurm
-→ submit with sbatch
-→ check with squeue
-→ inspect the allocated GPU using node-usage.sh
-→ monitor the logs
-→ download best.pt using WinSCP
-```
+Slurm squeue：https://slurm.schedmd.com/squeue.html
 
 
 
