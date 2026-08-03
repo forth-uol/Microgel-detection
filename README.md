@@ -231,17 +231,6 @@ cat data.yaml
 
 ## Step 6: Load the Miniforge Conda Module on Barkla
 
-The previous commands:
-
-```bash
-module load python/3.11.9-gcc14.2.0
-source ~/yolo_project/yolo_env/bin/activate
-```
-
-load a standard Python virtual environment rather than a Conda environment.
-
-Do not load the old Python module or activate the old `yolo_env` virtual environment when using the new Conda environment.
-
 First, search for the available Conda-related modules:
 
 ```bash
@@ -324,6 +313,7 @@ conda create \
     pip \
     -y
 ```
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/7868c249-9981-4f45-b240-b7b53a6b7a12" />
 
 Activate the environment:
 
@@ -346,6 +336,8 @@ The expected output is similar to:
 Python 3.11.15
 pip 26.2 from /mnt/fastscratch/users/sgzjia25/conda_envs/yolo/lib/python3.11/site-packages/pip
 ```
+
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/2b87eca6-04a8-4ec3-a9f6-dd8a5695785d" />
 
 The shell prompt should also begin with the environment path:
 
