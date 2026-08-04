@@ -4,3 +4,4 @@ logs/
 runs/
 *.out
 *.err
+verification_*.png

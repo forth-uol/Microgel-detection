@@ -8,14 +8,13 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --chdir=/mnt/fastscratch/users/sgzjia25/yolo_project
-#SBATCH --output=/mnt/fastscratch/users/sgzjia25/yolo_project/logs/%x.%N.%j.out
-#SBATCH --error=/mnt/fastscratch/users/sgzjia25/yolo_project/logs/%x.%N.%j.err
+#SBATCH --output=logs/%x.%N.%j.out
+#SBATCH --error=logs/%x.%N.%j.err
 
 set -euo pipefail
 
-PROJECT="/mnt/fastscratch/users/sgzjia25/yolo_project"
-YOLO_ENV="/mnt/fastscratch/users/sgzjia25/conda_envs/yolo"
+PROJECT="${YOLO_PROJECT:-/mnt/fastscratch/users/$USER/yolo_project}"
+YOLO_ENV="${YOLO_ENV:-/mnt/fastscratch/users/$USER/conda_envs/yolo}"
 
 EPOCHS="${YOLO_EPOCHS:-1}"
 IMGSZ="${YOLO_IMGSZ:-640}"

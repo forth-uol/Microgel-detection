@@ -8,15 +8,18 @@ This README is a step-by-step Windows -> Barkla HPC -> YOLO training guide for t
 
 Use this section before following the later training steps.
 
-- Barkla username used in the screenshots: `sgzjia25`
-- Project directory: `/mnt/fastscratch/users/sgzjia25/yolo_project`
+- Barkla username: use your own University username.
+- Project directory: `/mnt/fastscratch/users/$USER/yolo_project`
+- Dataset source directory example: `/mnt/fastscratch/users/$USER/yolo_train/microgel_dataset_clean`
+- Project dataset links: `dataset/images` and `dataset/labels` point to the dataset source directory above.
 - `train.py` is present on Barkla and passes `python -m py_compile train.py`.
-- Dataset check passed: 63 train images, 63 train labels, 18 validation images, 18 validation labels.
+- Dataset check passed after linking: 63 train images, 63 train labels, 18 validation images, 18 validation labels.
 - `weights/yolo26m.pt` exists.
-- Test jobs `10117422` and `10117602` failed. The latest checked job, `10117602`, failed after 14 seconds with a Slurm CPU environment conflict.
-- No production training job has completed, and no result directory was created for job `10117602`.
+- Final pre-submission check passed and printed `READY_FOR_SBATCH train.slurm`.
+- A one-epoch Slurm test completed successfully on Barkla: `COMPLETED`, exit code `0:0`.
+- Test output exists under `$PROJECT/runs/microgel_yolo26m/`, including `best.pt`, `last.pt`, `results.csv`, `results.png`, and `args.yaml`.
 
-Do not submit production training until a new one-epoch Slurm test job is `COMPLETED` and the logs/results are clean. Do not run YOLO training directly on a login node.
+The one-epoch Slurm test has completed. For a longer training run, increase training settings only as allowed by your course, supervisor, and Barkla usage rules. Do not run YOLO training directly on a login node.
 
 ## Step 1: Install or Open WinSCP and WindTerm
 
@@ -73,7 +76,7 @@ ls -lh
 For this account, the project path is:
 
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project
+/mnt/fastscratch/users/$USER/yolo_project
 ```
 
 ![Step 3 project directory check](screenshots_steps/step_03_project_dir_fullscreen.png)
@@ -92,30 +95,40 @@ User name:     your University username
 Password:      your University password
 ```
 
-On the remote side, open:
+On the remote side, open or create the dataset source folder:
 
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project
+/mnt/fastscratch/users/$USER/yolo_train/microgel_dataset_clean
 ```
 
-Upload the dataset into:
+Upload the dataset into that folder. The checked dataset is already there:
 
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project/dataset
+/mnt/fastscratch/users/$USER/yolo_train/microgel_dataset_clean
 ```
 
 Required YOLO structure:
 
 ```text
-yolo_project/
-  dataset/
-    images/
-      train/
-      val/
-    labels/
-      train/
-      val/
-    data.yaml
+microgel_dataset_clean/
+  images/
+    train/
+    val/
+  labels/
+    train/
+    val/
+```
+
+Link the dataset into the project directory so `train.py` can use the same stable project paths:
+
+```bash
+export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
+export DATA="/mnt/fastscratch/users/$USER/yolo_train/microgel_dataset_clean"
+
+mkdir -p "$PROJECT/dataset"
+ln -sfn "$DATA/images" "$PROJECT/dataset/images"
+ln -sfn "$DATA/labels" "$PROJECT/dataset/labels"
+ls -l "$PROJECT/dataset"
 ```
 
 The WinSCP screenshot is only for the file-transfer interface. Script existence is verified later in WindTerm.
@@ -138,6 +151,8 @@ names:
   0: microgel
 YAML
 ```
+
+If the dataset is stored in `/mnt/fastscratch/users/$USER/yolo_train/microgel_dataset_clean`, the links from Step 4 make `images/train`, `images/val`, `labels/train`, and `labels/val` appear under `$PROJECT/dataset`.
 
 Check it:
 
@@ -289,6 +304,12 @@ val images:   18
 val labels:   18
 ```
 
+These counts were checked through the project links to:
+
+```text
+/mnt/fastscratch/users/$USER/yolo_train/microgel_dataset_clean
+```
+
 Download or verify the pretrained model before requesting a GPU:
 
 ```bash
@@ -304,7 +325,7 @@ ls -lh yolo26m.pt
 Use the `train.py` file included in this repository, or create the same file in:
 
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project/train.py
+/mnt/fastscratch/users/$USER/yolo_project/train.py
 ```
 
 Important paths inside the script:
@@ -366,7 +387,7 @@ Important: this README template launches the Python program directly inside the 
 python -u train.py --epochs "$EPOCHS" --imgsz "$IMGSZ" --batch "$BATCH" --workers "$WORKERS"
 ```
 
-It does not use a nested `srun python ...` line for the Python training command. The previous nested `srun` form was associated with the Slurm CPU environment conflict seen in job `10117602`.
+It does not use a nested `srun python ...` line for the Python training command. A previous nested `srun` form caused a Slurm CPU environment conflict during testing.
 
 If your remote `train.slurm` still contains `srun python`, back it up and replace only that launcher:
 
@@ -463,12 +484,11 @@ Minimal `train.slurm` example:
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --chdir=/mnt/fastscratch/users/sgzjia25/yolo_project
-#SBATCH --output=/mnt/fastscratch/users/sgzjia25/yolo_project/logs/%x.%N.%j.out
-#SBATCH --error=/mnt/fastscratch/users/sgzjia25/yolo_project/logs/%x.%N.%j.err
+#SBATCH --output=logs/%x.%N.%j.out
+#SBATCH --error=logs/%x.%N.%j.err
 
-PROJECT="/mnt/fastscratch/users/sgzjia25/yolo_project"
-YOLO_ENV="/mnt/fastscratch/users/sgzjia25/conda_envs/yolo"
+PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
+YOLO_ENV="/mnt/fastscratch/users/$USER/conda_envs/yolo"
 EPOCHS=1
 IMGSZ=640
 BATCH=2
@@ -569,7 +589,13 @@ Only trust the run if the main job row says `COMPLETED` and the error log is cle
 The Python script writes YOLO output under:
 
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project/runs/
+/mnt/fastscratch/users/$USER/yolo_project/runs/
+```
+
+The completed one-epoch test wrote output to:
+
+```text
+/mnt/fastscratch/users/$USER/yolo_project/runs/microgel_yolo26m/
 ```
 
 Check:
@@ -595,7 +621,7 @@ args.yaml
 Open WinSCP and go to:
 
 ```text
-/mnt/fastscratch/users/sgzjia25/yolo_project/runs/
+/mnt/fastscratch/users/$USER/yolo_project/runs/
 ```
 
 Drag the finished run folder from Barkla to your own computer.
