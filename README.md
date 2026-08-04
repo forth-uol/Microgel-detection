@@ -528,24 +528,25 @@ If `logs/*.err` shows a clear error, fix that before submitting again.
 
 ## Step 16: Optional GPU Usage Check
 
-If `node-usage.sh` is available on Barkla, run:
+`node-usage.sh` is this helper script:
+
+<https://gist.github.com/gmiklosic/f616f223afb783f77abf2e9f7f142778>
+
+It is optional. Use it only to check Slurm node/GPU usage; it does not start training.
+
+If `node-usage.sh` is already available on Barkla, run:
 
 ```bash
 node-usage.sh gpu
 ```
 
-If you use the helper script from this gist, read it first and use it only if your course or group allows local helper scripts:
-
-<https://gist.github.com/gmiklosic/f616f223afb783f77abf2e9f7f142778>
-
-Typical usage after saving it as `node-usage.sh`:
+If it is not available, read the gist first. If your course or group allows local helper scripts, save the gist content as `node-usage.sh` in your project directory:
 
 ```bash
+cd "/mnt/fastscratch/users/$USER/yolo_project"
 chmod +x node-usage.sh
 ./node-usage.sh gpu
 ```
-
-This only checks Slurm node/GPU usage. It is not a training command.
 
 ## Step 17: Wait for the Job to Finish
 
