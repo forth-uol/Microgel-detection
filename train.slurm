@@ -17,9 +17,9 @@ set -euo pipefail
 PROJECT="/mnt/fastscratch/users/sgzjia25/yolo_project"
 YOLO_ENV="/mnt/fastscratch/users/sgzjia25/conda_envs/yolo"
 
-EPOCHS="${YOLO_EPOCHS:-100}"
-IMGSZ="${YOLO_IMGSZ:-1920}"
-BATCH="${YOLO_BATCH:--1}"
+EPOCHS="${YOLO_EPOCHS:-1}"
+IMGSZ="${YOLO_IMGSZ:-640}"
+BATCH="${YOLO_BATCH:-2}"
 WORKERS="${SLURM_CPUS_PER_TASK:-4}"
 
 echo "========================================"

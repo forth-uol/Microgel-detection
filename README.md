@@ -386,18 +386,33 @@ These checks do not train the model:
 
 ```bash
 export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
+missing=0
 
-python -m py_compile "$PROJECT/train.py" && echo "train.py OK"
-bash -n "$PROJECT/train.slurm" && echo "train.slurm OK"
-test -f "$PROJECT/dataset/data.yaml" && echo "data.yaml OK"
-test -s "$PROJECT/weights/yolo26m.pt" && echo "model OK"
-test -d "$PROJECT/dataset/images/train" && echo "training images OK"
-test -d "$PROJECT/dataset/images/val" && echo "validation images OK"
-test -d "$PROJECT/dataset/labels/train" && echo "training labels OK"
-test -d "$PROJECT/dataset/labels/val" && echo "validation labels OK"
+check_file() {
+    test -s "$1" && echo "OK: $2" || { echo "MISSING: $2 ($1)"; missing=1; }
+}
+
+check_dir() {
+    test -d "$1" && echo "OK: $2" || { echo "MISSING: $2 ($1)"; missing=1; }
+}
+
+python -m py_compile "$PROJECT/train.py" && echo "OK: train.py syntax"
+bash -n "$PROJECT/train.slurm" && echo "OK: train.slurm syntax"
+check_file "$PROJECT/dataset/data.yaml" "data.yaml"
+check_file "$PROJECT/weights/yolo26m.pt" "model weights"
+check_dir "$PROJECT/dataset/images/train" "training images"
+check_dir "$PROJECT/dataset/images/val" "validation images"
+check_dir "$PROJECT/dataset/labels/train" "training labels"
+check_dir "$PROJECT/dataset/labels/val" "validation labels"
+
+if [ "$missing" -eq 0 ]; then
+    echo "Ready for sbatch train.slurm"
+else
+    echo "NOT READY: fix the missing files above before sbatch"
+fi
 ```
 
-Only continue if every line is OK.
+Only continue if every line is `OK` and the final line says `Ready for sbatch train.slurm`.
 
 ![Step 13 final checks](screenshots_steps/step_13_presubmit_fullscreen.png)
 
@@ -411,18 +426,25 @@ At this point, the normal workflow only needs two files:
 Minimal `train.py` example:
 
 ```python
+import argparse
 from pathlib import Path
 
 from ultralytics import YOLO
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--epochs", type=int, default=1)
+parser.add_argument("--imgsz", type=int, default=640)
+parser.add_argument("--batch", type=int, default=2)
+args = parser.parse_args()
 
 ROOT = Path(__file__).resolve().parent
 
 model = YOLO(str(ROOT / "weights" / "yolo26m.pt"))
 model.train(
     data=str(ROOT / "dataset" / "data.yaml"),
-    epochs=1,
-    imgsz=640,
-    batch=2,
+    epochs=args.epochs,
+    imgsz=args.imgsz,
+    batch=args.batch,
     device=0,
     project=str(ROOT / "runs"),
     name="microgel_yolo26m",
@@ -447,6 +469,9 @@ Minimal `train.slurm` example:
 
 PROJECT="/mnt/fastscratch/users/sgzjia25/yolo_project"
 YOLO_ENV="/mnt/fastscratch/users/sgzjia25/conda_envs/yolo"
+EPOCHS=1
+IMGSZ=640
+BATCH=2
 
 module purge
 module load miniforge3/25.3.0-python3.12.10-dynamic
@@ -454,10 +479,10 @@ eval "$(conda shell.bash hook)"
 conda activate "$YOLO_ENV"
 
 cd "$PROJECT"
-python -u train.py
+python -u train.py --epochs "$EPOCHS" --imgsz "$IMGSZ" --batch "$BATCH"
 ```
 
-After this small test works, increase `epochs`, `imgsz`, and `batch` in `train.py` for the real run.
+After this small test works, increase `EPOCHS`, `IMGSZ`, and `BATCH` in `train.slurm` for the real run.
 
 Submit the job:
 
