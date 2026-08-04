@@ -401,183 +401,160 @@ Only continue if every line is OK.
 
 ![Step 13 final checks](screenshots_steps/step_13_presubmit_fullscreen.png)
 
-## Step 14: Submit a One-epoch Test Job Only
+## Step 14: Submit the Slurm Job
 
-Submit only a small test first:
+At this point, the normal workflow only needs two files:
+
+- `train.py`
+- `train.slurm`
+
+Minimal `train.py` example:
+
+```python
+from pathlib import Path
+
+from ultralytics import YOLO
+
+ROOT = Path(__file__).resolve().parent
+
+model = YOLO(str(ROOT / "weights" / "yolo26m.pt"))
+model.train(
+    data=str(ROOT / "dataset" / "data.yaml"),
+    epochs=1,
+    imgsz=640,
+    batch=2,
+    device=0,
+    project=str(ROOT / "runs"),
+    name="microgel_yolo26m",
+)
+```
+
+Minimal `train.slurm` example:
+
+```bash
+#!/bin/bash -l
+#SBATCH --job-name=yolo_microgel
+#SBATCH --partition=gpu-a-lowsmall
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
+#SBATCH --time=24:00:00
+#SBATCH --chdir=/mnt/fastscratch/users/sgzjia25/yolo_project
+#SBATCH --output=/mnt/fastscratch/users/sgzjia25/yolo_project/logs/%x.%N.%j.out
+#SBATCH --error=/mnt/fastscratch/users/sgzjia25/yolo_project/logs/%x.%N.%j.err
+
+PROJECT="/mnt/fastscratch/users/sgzjia25/yolo_project"
+YOLO_ENV="/mnt/fastscratch/users/sgzjia25/conda_envs/yolo"
+
+module purge
+module load miniforge3/25.3.0-python3.12.10-dynamic
+eval "$(conda shell.bash hook)"
+conda activate "$YOLO_ENV"
+
+cd "$PROJECT"
+python -u train.py
+```
+
+After this small test works, increase `epochs`, `imgsz`, and `batch` in `train.py` for the real run.
+
+Submit the job:
+
+```bash
+export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
+cd "$PROJECT"
+
+sbatch train.slurm
+```
+
+Slurm will print a job ID, for example:
 
 ```text
-epochs = 1
-imgsz  = 640
-batch  = 2
+Submitted batch job 12345678
 ```
 
-Use a fresh WindTerm SSH session if possible. Before submission, check for stale Slurm submit variables:
+## Step 15: Check Whether Training Has Started
+
+Use:
 
 ```bash
-env | grep -E '^(SLURM|SBATCH)_' || echo "No SLURM/SBATCH variables in the submit shell"
+squeue --me
 ```
 
-Then submit the test job:
+Useful states:
+
+```text
+PD  pending, waiting in the queue
+R   running
+CG  completing
+```
+
+If it is running, check the log files:
 
 ```bash
-export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
-cd "$PROJECT"
-
-unset SLURM_CPUS_PER_TASK SLURM_TRES_PER_TASK SBATCH_CPUS_PER_TASK SBATCH_TRES_PER_TASK
-
-JOBID=$(sbatch --parsable \
-    --export=YOLO_EPOCHS=1,YOLO_IMGSZ=640,YOLO_BATCH=2 \
-    train.slurm)
-
-JOBID="${JOBID%%;*}"
-printf '%s\n' "$JOBID" > .last_job_id
-echo "Submitted test job: $JOBID"
+cd "/mnt/fastscratch/users/$USER/yolo_project"
+ls -lh logs/
+tail -n 80 logs/*.out
+tail -n 80 logs/*.err
 ```
 
-Immediately check it:
+If `logs/*.err` shows a clear error, fix that before submitting again.
+
+## Step 16: Optional GPU Usage Check
+
+If `node-usage.sh` is available on Barkla, run:
 
 ```bash
-squeue -j "$JOBID" -o "%.12i %.14P %.16j %.10T %.8M %.12R"
-sacct -j "$JOBID" --format=JobID,State,ReqCPUS,AllocCPUS,ExitCode
+node-usage.sh gpu
 ```
 
-The latest audited test job failed, so do not proceed to production yet:
+If you use the helper script from this gist, read it first and use it only if your course or group allows local helper scripts:
 
-![Step 14 failed test diagnosis](screenshots_steps/step_14_submit_env_diagnosis_fullscreen.png)
+<https://gist.github.com/gmiklosic/f616f223afb783f77abf2e9f7f142778>
 
-If another one-epoch test fails immediately with a Slurm CPU environment conflict, stop and ask Barkla support or your supervisor. Repeated failed submissions are not a useful use of the cluster.
-
-## Step 15: Production Training Is Locked Until the Test Passes
-
-Do not submit production training while the one-epoch test is failed or pending.
-
-Only after the main test job row is `COMPLETED`, logs contain no traceback or out-of-memory error, and expected result files exist, submit production:
+Typical usage after saving it as `node-usage.sh`:
 
 ```bash
-export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
-cd "$PROJECT"
-
-JOBID=$(sbatch --parsable \
-    --export=YOLO_EPOCHS=100,YOLO_IMGSZ=1280,YOLO_BATCH=-1 \
-    train.slurm)
-
-JOBID="${JOBID%%;*}"
-printf '%s\n' "$JOBID" > .last_job_id
-echo "Submitted production job: $JOBID"
+chmod +x node-usage.sh
+./node-usage.sh gpu
 ```
 
-This production command is intentionally not run in the current audited state.
+This only checks Slurm node/GPU usage. It is not a training command.
 
-## Step 16: Check Job Status
+## Step 17: Wait for the Job to Finish
 
-Restore the latest job ID:
+Keep checking:
 
 ```bash
-export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
-cd "$PROJECT"
-
-JOBID=$(cat .last_job_id)
-echo "JOBID=$JOBID"
+squeue --me
 ```
 
-Check Slurm:
+When your job disappears from `squeue --me`, check the final state:
 
 ```bash
-squeue -j "$JOBID" -o "%.12i %.14P %.16j %.10T %.8M %.12R"
-sacct -j "$JOBID" --format=JobID,JobName,State,Elapsed,ExitCode
+sacct --format=JobID,JobName,Partition,State,Elapsed,ExitCode -u "$USER" | tail -n 20
 ```
 
-The latest checked job is failed, not pending:
+Only trust the run if the main job row says `COMPLETED` and the error log is clean.
 
-![Step 16 failed job status](screenshots_steps/step_16_status_fullscreen.png)
+## Step 18: Find the Output Folder
 
-## Step 17: Inspect Logs and Diagnose Failures
+The Python script writes YOLO output under:
 
-List logs:
+```text
+/mnt/fastscratch/users/sgzjia25/yolo_project/runs/
+```
+
+Check:
 
 ```bash
-export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
-cd "$PROJECT"
-
-JOBID=$(cat .last_job_id)
-ls -lh logs/*"$JOBID"*
+cd "/mnt/fastscratch/users/$USER/yolo_project"
+find runs -maxdepth 3 -type f | sort | tail -n 40
+ls -lh runs/*/weights/
 ```
 
-View output:
-
-```bash
-tail -n 80 logs/yolo_microgel.*."$JOBID".out
-```
-
-View errors:
-
-```bash
-tail -n 80 logs/yolo_microgel.*."$JOBID".err
-```
-
-For job `10117602`, the error was a Slurm CPU environment conflict. This is why production remains blocked.
-
-![Step 17 failure diagnosis](screenshots_steps/step_17_failure_diagnosis_fullscreen.png)
-
-## Step 18: Check Completion, Resume or Cancel
-
-Check final accounting:
-
-```bash
-JOBID=$(cat .last_job_id)
-sacct -j "$JOBID" --format=JobID,JobName,Partition,State,Elapsed,MaxRSS,ExitCode
-```
-
-Only proceed if the main job row says `COMPLETED`.
-
-Current audited state:
-
-![Step 18 completion check](screenshots_steps/step_18_completion_fullscreen.png)
-
-Resume an interrupted completed allocation only when a `last.pt` checkpoint exists:
-
-```bash
-export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
-cd "$PROJECT"
-
-OLD_JOBID=123456
-LAST_PT="$PROJECT/runs/microgel_yolo26m_${OLD_JOBID}/weights/last.pt"
-test -s "$LAST_PT" && echo "Checkpoint found: $LAST_PT"
-
-JOBID=$(sbatch --parsable \
-    --export=YOLO_RESUME="$LAST_PT" \
-    train.slurm)
-
-JOBID="${JOBID%%;*}"
-printf '%s\n' "$JOBID" > .last_job_id
-echo "Submitted resume job: $JOBID"
-```
-
-Cancel only a specific job when needed:
-
-```bash
-scancel "$JOBID"
-squeue -j "$JOBID"
-```
-
-Do not use `scancel -u "$USER"` unless you really intend to cancel every queued and running job owned by the account.
-
-## Step 19: Locate Results
-
-After a successful job:
-
-```bash
-export PROJECT="/mnt/fastscratch/users/$USER/yolo_project"
-cd "$PROJECT"
-
-JOBID=$(cat .last_job_id)
-RUN_DIR="$PROJECT/runs/microgel_yolo26m_${JOBID}"
-
-find "$RUN_DIR" -maxdepth 2 -type f | sort
-ls -lh "$RUN_DIR/weights"
-```
-
-Expected files after a successful run:
+Important result files usually include:
 
 ```text
 weights/best.pt
@@ -587,26 +564,17 @@ results.png
 args.yaml
 ```
 
-Current audited state: job `10117602` failed, so no result directory was created.
+## Step 19: Download Results with WinSCP
 
-![Step 19 result directory check](screenshots_steps/step_19_results_fullscreen.png)
-
-## Step 20: Download Results with WinSCP
-
-Only after a successful job creates a run directory, use WinSCP to download:
+Open WinSCP and go to:
 
 ```text
-weights/best.pt
-weights/last.pt
-results.csv
-results.png
-confusion_matrix.png
-PR_curve.png
-F1_curve.png
-args.yaml
+/mnt/fastscratch/users/sgzjia25/yolo_project/runs/
 ```
 
-Also keep the matching setup files:
+Drag the finished run folder from Barkla to your own computer.
+
+Also download these setup files so the result can be reproduced later:
 
 ```text
 train.py
@@ -615,7 +583,21 @@ dataset/data.yaml
 yolo_requirements.txt
 ```
 
-Download results promptly or move them to University-approved long-term storage. `fastscratch` should not be the only copy.
+## Step 20: View the Output on Your Computer
+
+On Windows, open the downloaded files:
+
+```text
+results.png
+results.csv
+confusion_matrix.png
+PR_curve.png
+F1_curve.png
+weights/best.pt
+weights/last.pt
+```
+
+Use `best.pt` for inference/evaluation. Keep `last.pt` if you may need to resume training later.
 
 ## Quick Safety Checklist
 
